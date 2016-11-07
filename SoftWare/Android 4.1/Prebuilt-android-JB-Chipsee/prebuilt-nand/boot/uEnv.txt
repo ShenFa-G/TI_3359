@@ -1,0 +1,2 @@
+bootcmd=mmc rescan ; fatload mmc 0 0x81000000 boot.scr ; source 0x81000000
+uenvcmd=boot
