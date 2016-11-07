@@ -1,0 +1,5 @@
+系统开机时，需按住左上角按键3秒钟，等按键旁绿灯亮时，系统电源启动，此时可以松开按键，
+系统将正常启动。
+
+Please Push the Up-Left Button 3 Seconds to make the system Power On.
+
