@@ -1,0 +1,176 @@
+This document provides the information needed for build the Android Jelly Bean source code for Chipsee AM335x EVM Board. (Version 2013-02-01)
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
+*  [Contents]:
+
+   1. Original TI Source Code Download
+   2. Host PC Setup Requirements
+   3. Preparing Chipsee Source Package
+   4. Toolchain Setup
+   5. Build Procedure
+      5.1 Build Bootloader, Android Kernel, and basic Filesystem
+      5.2 Build RowboPERF Apps
+      5.3 Install Chipsee Additional Files
+      5.4 Create Root Filesystem Tarball
+      5.5 Manually Build Bootloader
+      5.6 Manually Build Android Linux Kernel
+   6. Chipsee Android Filesystem Modify List
+   7. Create NAND UBIFS Image File
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
+1. [Original TI Source Code Download]:
+
+  This Chipsee-release image is based on TI-Android-JB-4.1.2-DevKit-4.0.1 for AM335x Starter Kit:
+    http://software-dl.ti.com/dsps/dsps_public_sw/sdo_tii/TI_Android_DevKit/TI_Android_JB_4_1_2_DevKit_4_0_1/index_FDS.html
+
+  Original source code package can be downloaded from:
+    http://software-dl.ti.com/dsps/dsps_public_sw/sdo_tii/TI_Android_DevKit/TI_Android_JB_4_1_2_DevKit_4_0_1/exports/TI-Android-JB-4.1.2_AM335x_4.0.1.bin
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
+2. [Host PC Setup Requirements]:
+
+  NOTICE: This release does NOT support 32-bit build host. Only 64-bit hosts are supported.
+
+  For 64-bit Ubuntu 10.04 (Recommend):
+  
+  The following command installs the required packages for setting up the android build host:
+  
+    $ sudo apt-get install git-core gnupg flex bison gperf build-essential \
+    zip curl zlib1g-dev libc6-dev lib32ncurses5-dev ia32-libs \
+    x11proto-core-dev libx11-dev lib32readline5-dev lib32z-dev \
+    libgl1-mesa-dev g++-multilib mingw32 tofrodos python-markdown \
+    libxml2-utils xsltproc minicom tftpd uboot-mkimage expect
+
+  Install Oracle JDK 6:
+
+  Download the latest JDK 6 installer from Oracle http://www.oracle.com/technetwork/java/javase/downloads/index.html.
+  Accept the license agreement and click on the Linux x64 bin installer. The downloaded file will be named jdk-6uXX-linux-x64.bin
+  where XX is the JDK 6 update version.
+
+  Follow the following steps to install JDK 6:
+
+    $ chmod a+x jdk-6uXX-linux-x64.bin
+    $ ./jdk-6uXX-linux-x64.bin
+    $ sudo mkdir -p /usr/lib/jvm
+    $ sudo mv jdk1.6.0_XX /usr/lib/jvm/
+    $ sudo update-alternatives --install "/usr/bin/java" "java" "/usr/lib/jvm/jdk1.6.0_XX/bin/java" 1
+    $ sudo update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/jvm/jdk1.6.0_XX/bin/javac" 1
+    $ sudo update-alternatives --config java
+    $ sudo update-alternatives --config javac
+  
+  IMPORTANT: Export /usr/lib/jvm/jdkXXX/bin to $PATH
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
+3. [Preparing Chipsee Source Package]:
+
+    $ cd Source
+    $ tar jxvf android-jb-rowboat-chipsee.tar.bz2
+    $ cd android-jb-rowboat-chipsee/
+  
+  The u-boot folder contains the bootloader source code, and the kernel folder contains the linux kernel source code for Android.
+  The chipsee_addition folder contains ASCII and binary files which are needed for Chipsee AM335x EVM board.
+  The prebuilts folder contains cross-compile tools for building the Android source code.
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
+4. [Toolchain Setup]:
+
+  Setup the toolchain path to point to arm-eabi- tools in prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin
+
+    $ export PATH=<Your Path>/android-jb-rowboat-chipsee/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin:$PATH
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
+5. [Build Procedure]:
+
+  5.1 [Build Bootloader, Android Kernel, and basic Filesystem]
+
+    $ cd android-jb-rowboat-chipsee/
+    $ make TARGET_PRODUCT=am335xevm_sk OMAPES=4.x -j<N>
+
+      <N> should be twice the number of processors on your host PC. For example, a dual core machine would use -j4.
+
+    This will build the MLO, u-boot.img, uImage and basic filesystem for Android:
+
+    MLO, u-boot.img  ->  u-boot/
+    uImage           ->  kernel/arch/arm/boot/
+    filesystem       ->  out/target/product/am335xevm_sk/root/
+                         out/target/product/am335xevm_sk/system/
+
+  5.2 [Build RowboPERF Apps]
+
+    $ cd android-jb-rowboat-chipsee/
+    $ source build/envsetup.sh
+    $ cd rowboperf
+    $ mm TARGET_PRODUCT=am335xevm_sk
+
+    This will build the rowboPerf and install packages at out/target/product/am335xevm_sk/system/app
+    and out/target/product/am335xevm_sk/system/bin
+
+  5.3 [Install Chipsee Additional Files]
+
+    $ cd android-jb-rowboat-chipsee/
+    $ cp chipsee_addition/* out/target/product/am335xevm_sk/ -r
+   
+    This will modify the filesystem components needed by Chipsee AM335x EVM board.
+
+  5.4 [Create Root Filesystem Tarball]
+    
+    $ cd android-jb-rowboat-chipsee/
+    $ make TARGET_PRODUCT=am335xevm_sk fs_tarball
+
+  5.5 [Manually Build Bootloader]
+    
+    $ cd android-jb-rowboat-chipsee/u-boot/
+    $ make CROSS_COMPILE=arm-eabi- distclean
+    $ make CROSS_COMPILE=arm-eabi- am335x_evm_config
+    $ make CROSS_COMPILE=arm-eabi-
+
+  5.6 [Manually Build Android Linux Kernel]
+
+    $ cd android-jb-rowboat-chipsee/kernel/
+    $ make CROSS_COMPILE=arm-eabi- distclean
+    $ make CROSS_COMPILE=arm-eabi- am335x_evm_android_defconfig
+    $ make CROSS_COMPILE=arm-eabi- uImage -j<N>
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
+6. [Chipsee Android Filesystem Modify List]
+
+    /system/lib/hw/sensors.am335xevm.so   [Binary]
+    /system/usr/keylayout/gpio-keys.kl     [ASCII]
+    /system/etc/mixer_paths.xml            [ASCII]
+    /system/build.prop                     [ASCII]
+    /root/calibrate                        [ASCII]
+    /root/chipsee_compass/                [Folder]
+    /root/init.am335xevm.rc                [ASCII]
+    /root/init.chipsee.sh                  [ASCII]
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
+7. Create NAND UBIFS Image File (ubi.img)
+
+    Install the mtd-utils:
+
+      $ sudo apt-get install mtd-utils
+   
+    Prepare the rootfs files:
+      
+      $ mkdir rootfs
+      $ cp out/target/product/am335xevm_sk/root/* ./rootfs/ -a
+      $ cp out/target/product/am335xevm_sk/system/ ./rootfs/ -a
+
+    Making ubifs:
+
+      $ mkfs.ubifs -r rootfs/ -F -o ubifs.img -m 2048 -e 126976 -c 4096
+      $ ubinize -o ubi.img -m 2048 -p 128KiB -s 512 -O 2048 ubinize.cfg
+
+    NOTICE: The ubinize.cfg file is provided in the UBIFS/ folder.
+
+-----------------------------------------------------------------------------------------------------------------------------------      
+
+By Chipsee 2013.2.1
